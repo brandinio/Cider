@@ -134,7 +134,7 @@ jobs:
       - checkout
       - run:
           name: Update PIP
-          command: python -m ensurepip --upgrade
+          command: sudo python -m ensurepip --upgrade
       - run:
           name: Sign into EVS
           command: |
