@@ -127,6 +127,62 @@ jobs:
             - dist/*.exe
             - dist/Cider-Setup-winget-*.exe.blockmap
 
+  build-macos:
+    executor: cider-ci
+    macos:
+      xcode: 12.5.1 # indicate your selected version of Xcode
+    steps:
+      - checkout
+      - run:
+          name: Sign into EVS
+          run: |
+            python3 -m pip install --upgrade castlabs-evs
+            python3 -m castlabs_evs.account refresh -A ${{ secrets.EVS_ACCOUNT_NAME }} -P ${{ secrets.EVS_PASSWD }}
+      - run:
+          name: Build  
+          environment: 
+            CSC_LINK: ${{ secrets.CSC_LINK }}
+            CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }} 
+            APPLEID: ${{ secrets.APPLEID }}
+            APPLEIDPASS: ${{ secrets.APPLEIDPASS }}
+            APPLE_ID: ${{ secrets.APPLEID }}
+            APPLE_ID_PASSWORD: ${{ secrets.APPLEIDPASS }}
+            PSC_NAME: ${{ secrets.PSC_NAME }}
+            DEVELOPER_DIR: /Applications/Xcode_12.4.app/Contents/Developer
+          run: |
+            rm cider-yarn.lock || true
+            xcodebuild -version
+            yarn install
+            cp resources/verror-types node_modules/@types/verror/index.d.ts
+            cp resources/macPackager.js node_modules/app-builder-lib/out/macPackager.js 
+            yarn dist:universalNotWorking -p never
+      - run:
+          name: Add license to dmg
+          run: |
+            npx dmg-license resources/license.json dist/*.dmg
+      - run:
+          name: Create PKG manually  
+          environment:
+            CSC_LINK: ${{ secrets.CSC_LINK }}
+            CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }} 
+            APPLEID: ${{ secrets.APPLEID }}
+            APPLEIDPASS: ${{ secrets.APPLEIDPASS }}
+          run: |
+            pkgbuild --component dist/mac-universal/Cider.app --install-location /Applications dist/Cider.pkg --sign ${{ secrets.PSC_NAME }} 
+            xcrun altool --notarize-app --primary-bundle-id com.ciderapp.cider -f dist/Cider.pkg  --username ${{ secrets.APPLEID }} --password ${{ secrets.APPLEIDPASS }}
+            sleep 5m
+            xcrun stapler staple dist/Cider.pkg || true
+            mv dist/*.dmg dist/Cider.dmg
+      - run:
+          name: Build Application
+          command: xcodebuild
+      - run:
+          name: Compress app for storage
+          command: zip -r app.zip build/Release/circleci-demo-macos.app
+      - store_artifacts:
+          path: app.zip
+          destination: app
+
   release:
     executor: cider-ci
     steps:
@@ -164,6 +220,7 @@ jobs:
 workflows:
   build_and_release:
     jobs:
+      - build-macos
       - prepare-build:
           filters:
             branches:
