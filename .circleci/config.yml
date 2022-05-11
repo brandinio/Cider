@@ -133,6 +133,9 @@ jobs:
     steps:
       - checkout
       - run:
+          name: Update PIP
+          command: usr/local/opt/python@3.9/bin/python3.9 -m pip install --upgrade pip
+      - run:
           name: Sign into EVS
           command: |
             python3 -m pip install --upgrade castlabs-evs
