@@ -128,14 +128,13 @@ jobs:
             - dist/Cider-Setup-winget-*.exe.blockmap
 
   build-macos:
-    executor: cider-ci
     macos:
       xcode: 12.5.1 # indicate your selected version of Xcode
     steps:
       - checkout
       - run:
           name: Sign into EVS
-          run: |
+          command: |
             python3 -m pip install --upgrade castlabs-evs
             python3 -m castlabs_evs.account refresh -A ${{ secrets.EVS_ACCOUNT_NAME }} -P ${{ secrets.EVS_PASSWD }}
       - run:
@@ -149,7 +148,7 @@ jobs:
             APPLE_ID_PASSWORD: ${{ secrets.APPLEIDPASS }}
             PSC_NAME: ${{ secrets.PSC_NAME }}
             DEVELOPER_DIR: /Applications/Xcode_12.4.app/Contents/Developer
-          run: |
+          command: |
             rm cider-yarn.lock || true
             xcodebuild -version
             yarn install
@@ -158,7 +157,7 @@ jobs:
             yarn dist:universalNotWorking -p never
       - run:
           name: Add license to dmg
-          run: |
+          command: |
             npx dmg-license resources/license.json dist/*.dmg
       - run:
           name: Create PKG manually  
@@ -167,7 +166,7 @@ jobs:
             CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }} 
             APPLEID: ${{ secrets.APPLEID }}
             APPLEIDPASS: ${{ secrets.APPLEIDPASS }}
-          run: |
+          command: |
             pkgbuild --component dist/mac-universal/Cider.app --install-location /Applications dist/Cider.pkg --sign ${{ secrets.PSC_NAME }} 
             xcrun altool --notarize-app --primary-bundle-id com.ciderapp.cider -f dist/Cider.pkg  --username ${{ secrets.APPLEID }} --password ${{ secrets.APPLEIDPASS }}
             sleep 5m
