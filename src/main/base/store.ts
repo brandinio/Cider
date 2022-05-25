@@ -23,7 +23,6 @@ export class Store {
             },
             "language": "en_US", // electron.app.getLocale().replace('-', '_') this can be used in future
             "playbackNotifications": true,
-            "update_branch": "main",
             "resumeOnStartupBehavior": "local",
             "privateEnabled": false,
             "themeUpdateNotification": true,
@@ -133,7 +132,7 @@ export class Store {
             "maxVolume": 1,
             "lastVolume": 1,
             "muted": false,
-            "playbackRate": '1',
+            "playbackRate": 1,
             "quality": "HIGH",
             "seamless_audio": true,
             "normalization": false,

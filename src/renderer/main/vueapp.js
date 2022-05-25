@@ -43,7 +43,9 @@ const app = new Vue({
         listennow: [],
         madeforyou: [],
         radio: {
-            personal: []
+            personal: {},
+            recent: {},
+            amlive: {},
         },
         mklang: 'en',
         webview: {
@@ -326,6 +328,7 @@ const app = new Vue({
             try {
                 this.listennow.timestamp = 0;
                 this.browsepage.timestamp = 0;
+                this.radio.timestamp = 0;
             } catch (e) { }
         },
         /**
@@ -658,6 +661,7 @@ const app = new Vue({
             }
 
             this.mk._bag.features['seamless-audio-transitions'] = this.cfg.audio.seamless_audio
+            this.mk._bag.features["broadcast-radio"] = true
             this.mk._services.apiManager.store.storekit._restrictedEnabled = false
             // API Fallback
             if (!this.chrome.userinfo) {
@@ -945,7 +949,12 @@ const app = new Vue({
                         silent: true,
                     });
                 }
-
+                setTimeout(() => {
+                    let i = (document.querySelector('#apple-music-player').src ?? "")
+                    if (i.endsWith(".m3u8") || i.endsWith(".m3u")){
+                        this._playRadioStream(i)
+                    }
+                }, 1500)
             })
 
 
@@ -1801,6 +1810,25 @@ const app = new Vue({
                 app.skipToPreviousItem()
             }
         },
+        isDisabled() {
+            if(!app.mk.nowPlayingItem || app.mk.nowPlayingItem.attributes.playParams.kind == 'radioStation') {
+                return true;
+            }
+            return false;
+        },
+        isPrevDisabled() {
+            if(this.isDisabled()  || (app.mk.queue._position == 0 && app.mk.currentPlaybackTime <= 2)) {
+                return true;
+            }
+            return false;
+        },
+        isNextDisabled() {
+            if(this.isDisabled()  || app.mk.queue._position + 1 == app.mk.queue.length) {
+                return true;
+            }
+            return false;
+        },
+        
         async getNowPlayingItemDetailed(target) {
             try {
                 let u = await app.mkapi(app.mk.nowPlayingItem.playParams.kind,
@@ -2621,21 +2649,6 @@ const app = new Vue({
             } catch (e) {
                 console.log(e)
                 this.getBrowsePage(attempt + 1)
-            }
-        },
-        async getRadioStations(attempt = 0) {
-            if (attempt > 3) {
-                return
-            }
-            try {
-                this.radio.personal = (await app.mk.api.v3.music(`/v1/me/recent/radio-stations`, {
-                    "platform": "web",
-                    "art[url]": "f",
-                    l: this.mklang
-                })).data.data;
-            } catch (e) {
-                console.log(e)
-                this.getRadioStations(attempt + 1)
             }
         },
         async getMadeForYou(attempt = 0) {
@@ -3710,7 +3723,7 @@ const app = new Vue({
                 if (app.getThemeDirective("lcdArtworkSize") != "") {
                     artworkSize = app.getThemeDirective("lcdArtworkSize")
                 } else if (this.cfg.visual.directives.windowLayout == "twopanel") {
-                    artworkSize = 80
+                    artworkSize = 110
                 }
                 this.currentArtUrl = '';
                 this.currentArtUrlRaw = '';
@@ -4200,11 +4213,8 @@ const app = new Vue({
             this.fullscreenState = flag; 
             if (flag) {
                 ipcRenderer.send('setFullScreen', true);
-                if (app.mk.nowPlayingItem.type && app.mk.nowPlayingItem.type.toLowerCase().includes("video")) {
-                   // document.querySelector('video#apple-music-video-player').requestFullscreen()
-                } else {
-                    app.appMode = 'fullscreen';
-                }
+                app.appMode = 'fullscreen';
+
                 document.addEventListener('keydown', event => {
                     if (event.key === 'Escape' && app.appMode === 'fullscreen') {
                         this.fullscreen(false);
@@ -4212,11 +4222,7 @@ const app = new Vue({
                 });
             } else {
                 ipcRenderer.send('setFullScreen', false);
-                if (app.mk.nowPlayingItem.type && app.mk.nowPlayingItem.type.toLowerCase().includes("video")) {
-
-                } else {
-                    app.appMode = 'player';
-                }
+                app.appMode = 'player';
             }
         },
         pip(){
@@ -4392,25 +4398,23 @@ const app = new Vue({
                 app.skipToNextItem()
             });
         },
-        checkForUpdate() {
-            ipcRenderer.send('check-for-update')
-            document.getElementById('settings.option.general.updateCider.check').innerHTML = 'Checking...'
-            notyf.success('Checking for update in background...')
-            ipcRenderer.on('update-response', (event, res) => {
-                if (res === "update-not-available") {
-                    notyf.error(app.getLz(`settings.notyf.updateCider.${res}`))
-                } else if (res === "update-downloaded") {
-                    notyf.success(app.getLz(`settings.notyf.updateCider.${res}`))
-                } else if (res === "update-error") {
-                    notyf.error(app.getLz(`settings.notyf.updateCider.${res}`))
-                } else if (res === "update-timeout") {
-                    notyf.error(app.getLz(`settings.notyf.updateCider.${res}`))
-                }
-                document.getElementById('settings.option.general.updateCider.check').innerHTML = app.getLz('term.check')
-            })
-        },
         authCC() {
             ipcRenderer.send('cc-auth')
+        },
+        _playRadioStream(e) {
+            var xhr = new XMLHttpRequest();
+            xhr.onreadystatechange = process;
+            xhr.open("GET", e , true);
+            xhr.send();
+            let self = this
+            function process() {
+              if (xhr.readyState == 4) {
+                let sources = xhr.responseText.match(/^(?!#)(?!\s).*$/mg).filter(function(element){return (element);});
+                // Load first source
+                let src = sources[0];
+                app.mk._services.mediaItemPlayback._currentPlayer._playAssetURL(src, false)
+              }
+            }
         }
     }
 })
