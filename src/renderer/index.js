@@ -115,7 +115,6 @@ function fallbackinitMusicKit() {
     request.open("GET", "https://raw.githubusercontent.com/lujjjh/LitoMusic/main/token.json");
     request.send();
 }
-
 document.addEventListener('musickitloaded', function () {
     console.log('MusicKit loaded')
     // MusicKit global is now defined
@@ -134,7 +133,7 @@ document.addEventListener('musickitloaded', function () {
             function waitForApp() {
                 if (typeof app.init !== "undefined") {
                     app.init()
-                    if (app.cfg.visual.window_background_style == "mica" && !app.isDev) {
+                    if (app.cfg.visual.window_background_style == "mica") {
                         app.spawnMica()
                     }
                 }
@@ -288,7 +287,6 @@ webGPU().then()
 let screenWidth = screen.width;
 let screenHeight = screen.height;
 
-window.onerror = function (error) {
-    console.log(error)
-    bootbox.alert("Error occurred: " + error)
-};
+document.addEventListener('DOMContentLoaded', async function () {
+    // app.oobeInit()
+})
