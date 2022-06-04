@@ -500,8 +500,11 @@ const app = new Vue({
             })
         },
         goToGrouping(url = "https://music.apple.com/WebObjects/MZStore.woa/wa/viewGrouping?cc=us&id=34") {
+            if (url.includes('viewTop')){
+            window.location.hash = `#charts/top`
+            } else {
             const id = url.split("id=")[1];
-            window.location.hash = `#groupings/${id}`
+            window.location.hash = `#groupings/${id}`}
         },
         navigateForward() {
             history.forward()
@@ -814,6 +817,19 @@ const app = new Vue({
                 self.setTheme(self.cfg.visual.theme, true)
                 if (app.cfg.visual.styles.length != 0) {
                     app.reloadStyles()
+                }
+            })
+
+            /**
+             * DiscordRPC Reload Return Event
+             * @author @coredev-uk
+             */
+            ipcRenderer.on('rpcReloaded', (e, user) => {
+                if (user.username) {
+                    app.notyf.success(app.stringTemplateParser(app.getLz("settings.option.connectivity.discordRPC.reconnectedToUser"), {
+                        user: `${user.username}#${user.discriminator}`,
+                        userid: user.id
+                    }));
                 }
             })
 
